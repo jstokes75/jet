@@ -209,6 +209,13 @@ def debug_print(s,output):
         print(output)
     return True
 
+def make_msg_id(sender):
+    dm = sender.split('@')[-1]
+    tm = time.time()
+    return "jet.{0}@{1}".format(tm,dm)
+
+
+
 def imap_test(s):
     print("Running Imap test")
     try:
@@ -361,7 +368,8 @@ def smtp_test(s):
 
     try:
         sm = smtplib.SMTP(s.smtp_server,s.smtp_port,None,s.tko)
-        sm.set_debuglevel(True)
+        if s.debug_output:
+            sm.set_debuglevel(True)
         sm.ehlo()
         if sm.has_extn('STARTTLS'):
             tls = True
@@ -378,8 +386,9 @@ def smtp_test(s):
         msg = str(er)
         s.handle_errors('SMTP','connection',msg)
         s.handle_logs('SMTP','test','failed : {0}'.format(msg))
-    except smtplib.socket.error:
-        s.handle_errors('SMTP','connection','Timeout')
+    except smtplib.socket.error as er:
+        msg = str(er)
+        s.handle_errors('SMTP','socket',msg)
         s.handle_logs('SMTP','test','failed')
     else:
         cc = "SMTP"
@@ -391,10 +400,9 @@ def smtp_test(s):
 def smtp_ssl_test(s):
     msg = ""
     print("Running SMTP SSL test")
-    debug_print(s,"connecting to {0}:{1}".format(s.smtp_server,s.smtp_ssl_port))
     timesent = datetime.datetime.now().strftime("%A, %d. %B %Y %I:%M%p")
 
-    outgoing = """Subject: {2}
+    outgoing = """From: {1}\nSubject: {2}\nDate: {6}\nTo: {0}\nReturn-Path: <{1}>\n
 
 
     To: {0}
@@ -405,7 +413,10 @@ def smtp_ssl_test(s):
     {3}
     """.format(s.smtp_to,s.user,s.smtp_subject,s.smtp_ssl_body,s.smtp_server,s.smtp_ssl_port,timesent)
     try:
+        debug_print(s,"connecting to {0}:{1}".format(s.smtp_server,s.smtp_ssl_port))
         sm = smtplib.SMTP_SSL(s.smtp_server,s.smtp_ssl_port,None,None,None,s.tko)
+        if s.debug_output:
+            sm.set_debuglevel(True)
         sm.ehlo()
         if sm.has_extn('STARTTLS'):
             tls = True
@@ -421,11 +432,12 @@ def smtp_ssl_test(s):
     except smtplib.SMTPException as er:
         msg = str(er)
         s.handle_errors('SMTP SSL','connection',msg)
-        s.handle_logs('SMTP SSL','test','failed : {0}'.format(msg))
+        s.handle_logs('SMTP SSL','test','failed')
         sm.quit()
-    except smtplib.socket.error:
-        s.handle_errors('SMTP SSL','connection','Timeout')
-        s.handle_logs('SMTP SSL','test','failed , timeout')
+    except smtplib.socket.error as er:
+        msg = str(er)
+        s.handle_errors('SMTP SSL','socket',msg)
+        s.handle_logs('SMTP SSL','test','failed')
     else:
         s.handle_logs('SMTP SSL','test','passed')
     return True
