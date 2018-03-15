@@ -51,6 +51,7 @@ class settings():
         self.aod = []
         self.aot = []
         self.debug_output = False
+        self.smtp_auth = True
 
     def setup(self):
         self.server = require_input("Server")
@@ -130,6 +131,7 @@ class settings():
         self.printer("SMTP SSL Port",self.smtp_ssl_port)
         self.printer("SMTP Server",self.smtp_server)
         self.printer("Send Test Mail To",self.smtp_to)
+        self.printer("SMTP AUTH",self.smtp_auth)
 
         self.printer("DEBUG Output",self.debug_output)
 
@@ -367,7 +369,9 @@ def smtp_test(s):
             sm.ehlo()
             debug_print(s,"Using TLS")
             s.handle_logs('SMTP','connection',"Using TLS")
-        sm.login(s.user, s.psw)
+        if s.smtp_auth:
+            s.handle_logs('SMTP','login',"Trying With Auth")
+            sm.login(s.user, s.psw)
         sm.sendmail(s.user,s.smtp_to,outgoing)
         sm.quit()
     except smtplib.SMTPException as er:
@@ -409,7 +413,7 @@ def smtp_ssl_test(s):
             sm.ehlo()
             print("Using TLS")
             s.handle_logs('SMTP','connection',"Using TLS")
-        if s.smtp_auth
+        if s.smtp_auth:
             s.handle_logs('SMTP','login',"Trying With Auth")
             sm.login(s.user, s.psw)
         sm.sendmail(s.user,s.smtp_to,outgoing)
